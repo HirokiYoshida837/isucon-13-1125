@@ -276,7 +276,7 @@ func getLivestreamStatisticsHandler(c echo.Context) error {
 		totalTips = 0
 		for _, tipsScore := range tipsScores {
 			if tipsScore.LivestreamID == livestream.ID {
-				reactions = tipsScore.Score
+				totalTips = tipsScore.Score
 				break
 			}
 		}
