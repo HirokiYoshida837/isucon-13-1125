@@ -31,6 +31,11 @@ type LivestreamViewerModel struct {
 	CreatedAt    int64 `db:"created_at" json:"created_at"`
 }
 
+type StatisticsScoreModel struct {
+	LivestreamID int64 `db:"livestream_id" json:"livestream_id"`
+	Score   		 int64 `db:"score" json:"score"`
+}
+
 type LivestreamModel struct {
 	ID           int64  `db:"id" json:"id"`
 	UserID       int64  `db:"user_id" json:"user_id"`
