@@ -195,7 +195,7 @@ func searchLivestreamsHandler(c echo.Context) error {
 		// }
 
 		query := `
-		SELECT l.id, l.livestream_id, tags.tag_id FROM livestream_tags l
+		SELECT l.id, l.livestream_id, tags.id as tag_id FROM livestream_tags l
 		INNER JOIN tags ON l.tag_id = tags.id
 		WHERE tags.name = ?
 		ORDER BY l.livestream_id DESC
