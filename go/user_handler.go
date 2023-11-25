@@ -28,6 +28,7 @@ const (
 	bcryptDefaultCost        = bcrypt.MinCost
 )
 
+// TODO: Cache していいやろこれ
 var fallbackImage = "../img/NoImage.jpg"
 
 type UserModel struct {
@@ -85,6 +86,7 @@ type PostIconResponse struct {
 	ID int64 `json:"id"`
 }
 
+// TODO: 闇が深そう
 func getIconHandler(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -97,7 +99,7 @@ func getIconHandler(c echo.Context) error {
 	defer tx.Rollback()
 
 	var user UserModel
-	if err := tx.GetContext(ctx, &user, "SELECT * FROM users WHERE name = ?", username); err != nil {
+	if err := tx.GetContext(ctx, &user, "SELECT id FROM users WHERE name = ?", username); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return echo.NewHTTPError(http.StatusNotFound, "not found user that has the given username")
 		}
@@ -291,7 +293,7 @@ func loginHandler(c echo.Context) error {
 
 	userModel := UserModel{}
 	// usernameはUNIQUEなので、whereで一意に特定できる
-	err = tx.GetContext(ctx, &userModel, "SELECT * FROM users WHERE name = ?", req.Username)
+	err = tx.GetContext(ctx, &userModel, "SELECT password FROM users WHERE name = ?", req.Username)
 	if errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid username or password")
 	}
@@ -355,7 +357,7 @@ func getUserHandler(c echo.Context) error {
 	defer tx.Rollback()
 
 	userModel := UserModel{}
-	if err := tx.GetContext(ctx, &userModel, "SELECT * FROM users WHERE name = ?", username); err != nil {
+	if err := tx.GetContext(ctx, &userModel, "SELECT id, name, display_name, description FROM users WHERE name = ?", username); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return echo.NewHTTPError(http.StatusNotFound, "not found user that has the given username")
 		}
@@ -400,7 +402,7 @@ func verifyUserSession(c echo.Context) error {
 
 func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (User, error) {
 	themeModel := ThemeModel{}
-	if err := tx.GetContext(ctx, &themeModel, "SELECT * FROM themes WHERE user_id = ?", userModel.ID); err != nil {
+	if err := tx.GetContext(ctx, &themeModel, "SELECT id, dark_mode FROM themes WHERE user_id = ?", userModel.ID); err != nil {
 		return User{}, err
 	}
 
