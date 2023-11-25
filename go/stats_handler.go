@@ -59,6 +59,12 @@ func (r UserRanking) Less(i, j int) bool {
 	}
 }
 
+type Score struct {
+	Name      string `db:"name"`
+	Tips      int64  `db:"tips"`
+	Reactions int64  `db:"reactions"`
+}
+
 func getUserStatisticsHandler(c echo.Context) error {
 	ctx := c.Request().Context()
 
