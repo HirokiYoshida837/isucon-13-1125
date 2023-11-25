@@ -17,3 +17,7 @@ create index reservation_slots_end_at_index
 create index themes_user_id_index
     on themes (user_id);
 
+
+create index livestream_tags_livestream_id_index2
+    on livestream_tags (livestream_id);
+
