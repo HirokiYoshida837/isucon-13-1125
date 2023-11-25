@@ -4,9 +4,7 @@ package main
 // sqlx的な参考: https://jmoiron.github.io/sqlx/
 
 import (
-	"context"
 	"fmt"
-	"go.opentelemetry.io/otel/attribute"
 	"io/ioutil"
 	"log"
 	"net"
@@ -16,22 +14,11 @@ import (
 	"strconv"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/jmoiron/sqlx"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-
 	"github.com/gorilla/sessions"
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo-contrib/session"
+	"github.com/labstack/echo/v4"
 	echolog "github.com/labstack/gommon/log"
-
-	"go.opentelemetry.io/contrib/exporters/autoexport"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
-	"go.opentelemetry.io/otel"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-
-	"github.com/uptrace/opentelemetry-go-extra/otelsql"
-	"github.com/uptrace/opentelemetry-go-extra/otelsqlx"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 const (
@@ -109,14 +96,14 @@ func connectDB(logger echo.Logger) (*sqlx.DB, error) {
 	dsn = dsn + "&interpolateParams=true"
 
 	// 元々あった接続処理をコメントアウト
-	//db, err := sqlx.Open("mysql", dsn)
+	db, err := sqlx.Open("mysql", dsn)
 
-	// dsnをotelsqlx に渡してMySQL用の sqlx.DBとして返す。
-	db, err := otelsqlx.Open("mysql", dsn,
-		otelsql.WithAttributes(semconv.DBSystemMySQL),
-		otelsql.WithAttributes(attribute.KeyValue{Key: "service.name", Value: attribute.StringValue("isucon_db")}),
-		otelsql.WithDBName("isupipe-db"),
-	)
+	//// dsnをotelsqlx に渡してMySQL用の sqlx.DBとして返す。
+	//db, err := otelsqlx.Open("mysql", dsn,
+	//	otelsql.WithAttributes(semconv.DBSystemMySQL),
+	//	otelsql.WithAttributes(attribute.KeyValue{Key: "service.name", Value: attribute.StringValue("isucon_db")}),
+	//	otelsql.WithDBName("isupipe-db"),
+	//)
 
 	if err != nil {
 		return nil, err
@@ -157,19 +144,19 @@ var fallBackGlobalImage []byte
 func main() {
 
 	e := echo.New()
-	e.Debug = true
-	e.Logger.SetLevel(echolog.DEBUG)
-	e.Use(middleware.Logger())
+	e.Debug = false
+	e.Logger.SetLevel(echolog.OFF)
+	//e.Use(middleware.Logger())
 
-	// setup otel exporter
-	ctx := context.Background()
-	// autoexport を利用して環境変数から設定を読み込ませる。
-	exporter, err := autoexport.NewSpanExporter(ctx)
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
-	)
-	otel.SetTracerProvider(tp)
-	e.Use(otelecho.Middleware("isuports-echo"))
+	//// setup otel exporter
+	//ctx := context.Background()
+	//// autoexport を利用して環境変数から設定を読み込ませる。
+	//exporter, err := autoexport.NewSpanExporter(ctx)
+	//tp := sdktrace.NewTracerProvider(
+	//	sdktrace.WithBatcher(exporter),
+	//)
+	//otel.SetTracerProvider(tp)
+	//e.Use(otelecho.Middleware("isuports-echo"))
 
 	cookieStore := sessions.NewCookieStore(secret)
 	cookieStore.Options.Domain = "*.u.isucon.dev"
