@@ -14,3 +14,15 @@ set @sql := if(@x > 0, 'select ''Index exists.''',
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 
+
+
+set @x := (select count(*)
+           from information_schema.statistics
+           where table_name = 'livestream_tags'
+             and index_name = 'livestream_tags_livestream_id_index'
+             and table_schema = database());
+set @sql := if(@x > 0, 'select ''Index exists.''',
+    'create index livestream_tags_livestream_id_index
+        on livestream_tags (livestream_id);;');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
