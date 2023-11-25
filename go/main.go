@@ -143,6 +143,8 @@ func initializeHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
 	}
 
+	globalIconCache.clear()
+
 	c.Request().Header.Add("Content-Type", "application/json;charset=utf-8")
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "golang",
@@ -250,6 +252,8 @@ func main() {
 	tagCache = make([]*Tag, 0)
 	// fallback iamge 読み込み
 	fallBackGlobalImage, _ = ioutil.ReadFile(fallbackImage)
+
+	globalIconCache.clear()
 
 	// HTTPサーバ起動
 	listenAddr := net.JoinHostPort("", strconv.Itoa(listenPort))
