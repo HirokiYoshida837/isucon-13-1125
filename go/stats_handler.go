@@ -120,7 +120,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to count tips: "+err.Error())
 	// }
 
-	score := []Score{}
+	scores := []Score{}
 	query := `
 	SELECT u.name, COUNT(DISTINCT l2.id) as tips, COUNT(DISTINCT r.id) as reactions FROM users u
 	INNER JOIN livestreams l ON l.user_id = u.id
@@ -128,11 +128,11 @@ func getUserStatisticsHandler(c echo.Context) error {
 	INNER JOIN reactions r ON r.user_id = u.id
 	GROUP BY u.id
 	`
-	if err := tx.GetContext(ctx, &score, query); err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err := tx.GetContext(ctx, &scores, query); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to count reactions: "+err.Error())
 	}
 
-	for _, score := range score {
+	for _, score := range scores {
 		ranking = append(ranking, UserRankingEntry{
 			Username: score.Name,
 			Score:    score.Tips + score.Reactions,
