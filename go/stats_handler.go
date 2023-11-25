@@ -262,28 +262,21 @@ func getLivestreamStatisticsHandler(c echo.Context) error {
 		rank++
 	}
 
-	// 視聴者数算出
-	var viewersCount int64
-	if err := tx.GetContext(ctx, &viewersCount, `SELECT COUNT(*) FROM livestreams l INNER JOIN livestream_viewers_history h ON h.livestream_id = l.id WHERE l.id = ?`, livestreamID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+	var customStatistic customStatisticModel
+	if err := tx.GetContext(ctx, &customStatistic, `
+		SELECT
+			COUNT(h.id) as viewers_count,
+			IFNULL(MAX(l2.tip), 0) as max_tip,
+			COUNT(r.id) as total_reactions,
+			COUNT(lr.id) as total_reports
+		FROM livestreams l
+		INNER JOIN livestream_viewers_history h ON h.livestream_id = l.id
+		INNER JOIN livecomments l2 ON l2.livestream_id = l.id
+		INNER JOIN reactions r ON r.livestream_id = l.id
+		INNER JOIN livecomment_reports lr ON lr.livestream_id = l.id
+		WHERE l.id = ?
+		`, livestreamID); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to count livestream viewers: "+err.Error())
-	}
-
-	// 最大チップ額
-	var maxTip int64
-	if err := tx.GetContext(ctx, &maxTip, `SELECT IFNULL(MAX(tip), 0) FROM livestreams l INNER JOIN livecomments l2 ON l2.livestream_id = l.id WHERE l.id = ?`, livestreamID); err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to find maximum tip livecomment: "+err.Error())
-	}
-
-	// リアクション数
-	var totalReactions int64
-	if err := tx.GetContext(ctx, &totalReactions, "SELECT COUNT(*) FROM livestreams l INNER JOIN reactions r ON r.livestream_id = l.id WHERE l.id = ?", livestreamID); err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to count total reactions: "+err.Error())
-	}
-
-	// スパム報告数
-	var totalReports int64
-	if err := tx.GetContext(ctx, &totalReports, `SELECT COUNT(*) FROM livestreams l INNER JOIN livecomment_reports r ON r.livestream_id = l.id WHERE l.id = ?`, livestreamID); err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to count total spam reports: "+err.Error())
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -292,9 +285,9 @@ func getLivestreamStatisticsHandler(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, LivestreamStatistics{
 		Rank:           rank,
-		ViewersCount:   viewersCount,
-		MaxTip:         maxTip,
-		TotalReactions: totalReactions,
-		TotalReports:   totalReports,
+		ViewersCount:   customStatistic.ViewersCount,
+		MaxTip:         customStatistic.MaxTip,
+		TotalReactions: customStatistic.TotalReactions,
+		TotalReports:   customStatistic.TotalReports,
 	})
 }
