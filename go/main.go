@@ -105,7 +105,6 @@ func connectDB(logger echo.Logger) (*sqlx.DB, error) {
 	}
 
 	dsn := conf.FormatDSN()
-	dsn = dsn + "&interpolateParams=true"
 
 	// 元々あった接続処理をコメントアウト
 	//db, err := sqlx.Open("mysql", dsn)
