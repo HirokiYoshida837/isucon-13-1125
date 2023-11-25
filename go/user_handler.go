@@ -90,26 +90,8 @@ func getIconHandler(c echo.Context) error {
 
 	username := c.Param("username")
 
-	tx, err := dbConn.BeginTxx(ctx, nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
-	}
-	defer tx.Rollback()
-
-	//select image from icons
-	//left join isupipe.users u on icons.user_id = u.id
-	//where u.name = 'kazuya580'
-
-	//var user UserModel
-	//if err := tx.GetContext(ctx, &user, "SELECT * FROM users WHERE name = ?", username); err != nil {
-	//	if errors.Is(err, sql.ErrNoRows) {
-	//		return echo.NewHTTPError(http.StatusNotFound, "not found user that has the given username")
-	//	}
-	//	return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
-	//}
-
 	var image []byte
-	if err := tx.GetContext(ctx, &image, "SELECT image FROM icons "+
+	if err := dbConn.GetContext(ctx, &image, "SELECT image FROM icons "+
 		" left join users u on icons.user_id = u.id "+
 		" where u.name = ? ", username); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
