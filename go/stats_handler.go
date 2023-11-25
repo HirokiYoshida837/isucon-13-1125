@@ -122,11 +122,11 @@ func getUserStatisticsHandler(c echo.Context) error {
 
 	scores := []Score{}
 	query := `
-	SELECT u.name, COUNT(DISTINCT l2.id) as tips, COUNT(DISTINCT r.id) as reactions FROM users u
+	SELECT u.name, l2.comment, IFNULL(SUM(l2.tip), 0) as tips, COUNT(DISTINCT r.id) as reactions FROM users u
 	INNER JOIN livestreams l ON l.user_id = u.id
 	INNER JOIN livecomments l2 ON l2.livestream_id = l.id
 	INNER JOIN reactions r ON r.user_id = u.id
-	GROUP BY u.id
+    GROUP BY l2.id
 	`
 	if err := tx.SelectContext(ctx, &scores, query); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to count reactions: "+err.Error())
