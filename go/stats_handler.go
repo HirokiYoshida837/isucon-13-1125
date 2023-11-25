@@ -59,6 +59,11 @@ func (r UserRanking) Less(i, j int) bool {
 	}
 }
 
+type UserTotalComment struct {
+	TotalLivecomments int64 `db:"totalLivecomments"`
+	TotalTip          int64 `db:"totalTip"`
+}
+
 func getUserStatisticsHandler(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -143,34 +148,51 @@ func getUserStatisticsHandler(c echo.Context) error {
 	}
 
 	// ライブコメント数、チップ合計
-	var totalLivecomments int64
-	var totalTip int64
-	var livestreams []*LivestreamModel
-	if err := tx.SelectContext(ctx, &livestreams, "SELECT * FROM livestreams WHERE user_id = ?", user.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
+	// var totalLivecomments int64 // これ出したいダケ
+	// var totalTip int64
+
+	var userTotalComment *UserTotalComment
+
+	query = `
+	SELECT user_id, COUNT(tip) as totalLivecomments, SUM(tip) as totalTip
+	FROM livecomments
+	WHERE user_id = ?
+	`
+	if err := tx.GetContext(ctx, &userTotalComment, query, user.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livecomments: "+err.Error())
 	}
 
-	for _, livestream := range livestreams {
-		var livecomments []*LivecommentModel
-		if err := tx.SelectContext(ctx, &livecomments, "SELECT * FROM livecomments WHERE livestream_id = ?", livestream.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livecomments: "+err.Error())
-		}
+	// var livestreams []*LivestreamModel
+	// if err := tx.SelectContext(ctx, &livestreams, "SELECT * FROM livestreams WHERE user_id = ?", user.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
+	// }
 
-		for _, livecomment := range livecomments {
-			totalTip += livecomment.Tip
-			totalLivecomments++
-		}
-	}
+	// for _, livestream := range livestreams {
+	// 	var livecomments []*LivecommentModel
+	// 	if err := tx.SelectContext(ctx, &livecomments, "SELECT * FROM livecomments WHERE livestream_id = ?", livestream.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+	// 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livecomments: "+err.Error())
+	// 	}
+
+	// 	for _, livecomment := range livecomments {
+	// 		totalTip += livecomment.Tip
+	// 		totalLivecomments++
+	// 	}
+	// }
 
 	// 合計視聴者数
 	var viewersCount int64
-	for _, livestream := range livestreams {
-		var cnt int64
-		if err := tx.GetContext(ctx, &cnt, "SELECT COUNT(*) FROM livestream_viewers_history WHERE livestream_id = ?", livestream.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream_view_history: "+err.Error())
-		}
-		viewersCount += cnt
+	query = `
+	SELECT COUNT(*) FROM livestream_viewers_history lv
+	INNER JOIN livestreams as l ON l.id = lv.livestream_id
+	WHERE l.user_id = ?
+	`
+	// for _, livestream := range livestreams {
+	// 	var cnt int64
+	if err := tx.GetContext(ctx, &viewersCount, query, user.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream_view_history: "+err.Error())
 	}
+	// 	viewersCount += cnt
+	// }
 
 	// お気に入り絵文字
 	var favoriteEmoji string
@@ -192,8 +214,8 @@ func getUserStatisticsHandler(c echo.Context) error {
 		Rank:              rank,
 		ViewersCount:      viewersCount,
 		TotalReactions:    totalReactions,
-		TotalLivecomments: totalLivecomments,
-		TotalTip:          totalTip,
+		TotalLivecomments: userTotalComment.TotalLivecomments,
+		TotalTip:          userTotalComment.TotalTip,
 		FavoriteEmoji:     favoriteEmoji,
 	}
 	return c.JSON(http.StatusOK, stats)
