@@ -10,6 +10,8 @@ require (
 	github.com/labstack/echo-contrib v0.15.0
 	github.com/labstack/echo/v4 v4.11.3
 	github.com/labstack/gommon v0.4.0
+	github.com/uptrace/opentelemetry-go-extra/otelsql v0.2.3
+	github.com/uptrace/opentelemetry-go-extra/otelsqlx v0.2.3
 	go.opentelemetry.io/contrib/exporters/autoexport v0.46.1
 	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.46.1
 	go.opentelemetry.io/otel v1.21.0
