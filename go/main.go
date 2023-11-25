@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"go.opentelemetry.io/otel/attribute"
 	"log"
 	"net"
 	"net/http"
@@ -26,6 +27,10 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
+	"github.com/uptrace/opentelemetry-go-extra/otelsql"
+	"github.com/uptrace/opentelemetry-go-extra/otelsqlx"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 const (
@@ -99,7 +104,18 @@ func connectDB(logger echo.Logger) (*sqlx.DB, error) {
 		conf.ParseTime = parseTime
 	}
 
-	db, err := sqlx.Open("mysql", conf.FormatDSN())
+	dsn := conf.FormatDSN()
+
+	// 元々あった接続処理をコメントアウト
+	//db, err := sqlx.Open("mysql", dsn)
+
+	// dsnをotelsqlx に渡してMySQL用の sqlx.DBとして返す。
+	db, err := otelsqlx.Open("mysql", dsn,
+		otelsql.WithAttributes(semconv.DBSystemMySQL),
+		otelsql.WithAttributes(attribute.KeyValue{Key: "service.name", Value: attribute.StringValue("isucon_db")}),
+		otelsql.WithDBName("isupipe-db"),
+	)
+
 	if err != nil {
 		return nil, err
 	}
