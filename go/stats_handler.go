@@ -158,7 +158,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 	FROM livecomments
 	WHERE user_id = ?
 	`
-	if err := tx.SelectContext(ctx, &userTotalComment, query, user.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err := tx.GetContext(ctx, &userTotalComment, query, user.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livecomments: "+err.Error())
 	}
 
