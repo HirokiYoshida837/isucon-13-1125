@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -85,26 +86,67 @@ type PostIconResponse struct {
 	ID int64 `json:"id"`
 }
 
+// 型定義
+type IconChache struct {
+	// mutexは内部で持つ。
+	mutex      sync.RWMutex
+	iconMap    map[string][]byte
+	LastUpdate time.Time
+}
+
+var globalIconCache = &IconChache{
+	mutex:      sync.RWMutex{},
+	iconMap:    make(map[string][]byte, 0),
+	LastUpdate: time.Time{},
+}
+
+func (ic *IconChache) getIcon(username string) ([]byte, bool) {
+	ic.mutex.Lock()
+	bytes, exist := ic.iconMap[username]
+	ic.mutex.Unlock()
+	return bytes, exist
+}
+
+func (ic *IconChache) clear() {
+	ic.mutex.Lock()
+	ic.iconMap = make(map[string][]byte)
+	ic.mutex.Unlock()
+}
+
+func (ic *IconChache) addIcon(username string, icon []byte) {
+	ic.mutex.Lock()
+	ic.iconMap[username] = icon
+	ic.mutex.Unlock()
+}
+
 func getIconHandler(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	username := c.Param("username")
 
-	var image []byte
-	if err := dbConn.GetContext(ctx, &image, "SELECT image FROM icons "+
-		" left join users u on icons.user_id = u.id "+
-		" where u.name = ? ", username); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+	icon, b := globalIconCache.getIcon(username)
 
-			//c.Response().Header().Set("Cache-Control", "max-age=36000000")
-			return c.Blob(http.StatusOK, "image/jpeg", fallBackGlobalImage)
+	if !b {
+		var image []byte
+		if err := dbConn.GetContext(ctx, &image, "SELECT image FROM icons "+
+			" left join users u on icons.user_id = u.id "+
+			" where u.name = ? ", username); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
 
-		} else {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user icon: "+err.Error())
+				//c.Response().Header().Set("Cache-Control", "max-age=36000000")
+				return c.Blob(http.StatusOK, "image/jpeg", fallBackGlobalImage)
+
+			} else {
+				return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user icon: "+err.Error())
+			}
 		}
+		return c.Blob(http.StatusOK, "image/jpeg", image)
+
+	} else {
+
+		return c.Blob(http.StatusOK, "image/jpeg", icon)
 	}
 
-	return c.Blob(http.StatusOK, "image/jpeg", image)
 }
 
 func postIconHandler(c echo.Context) error {
@@ -148,6 +190,14 @@ func postIconHandler(c echo.Context) error {
 	if err := tx.Commit(); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
+
+	// cache更新
+	reporterModel := UserModel{}
+	if err := tx.GetContext(ctx, &reporterModel, "SELECT * FROM users WHERE id = ?", userID); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
+	}
+
+	globalIconCache.addIcon(reporterModel.Name, req.Image)
 
 	return c.JSON(http.StatusCreated, &PostIconResponse{
 		ID: iconID,
