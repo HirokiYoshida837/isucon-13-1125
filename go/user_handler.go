@@ -357,7 +357,7 @@ func getUserHandler(c echo.Context) error {
 	defer tx.Rollback()
 
 	userModel := UserModel{}
-	if err := tx.GetContext(ctx, &userModel, "SELECT id, name, display_name, description FROM users WHERE name = ?", username); err != nil {
+	if err := tx.GetContext(ctx, &userModel, "SELECT * FROM users WHERE name = ?", username); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return echo.NewHTTPError(http.StatusNotFound, "not found user that has the given username")
 		}
