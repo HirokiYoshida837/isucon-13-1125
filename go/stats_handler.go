@@ -164,12 +164,18 @@ func getUserStatisticsHandler(c echo.Context) error {
 
 	// 合計視聴者数
 	var viewersCount int64
-	for _, livestream := range livestreams {
-		var cnt int64
-		if err := tx.GetContext(ctx, &cnt, "SELECT COUNT(*) FROM livestream_viewers_history WHERE livestream_id = ?", livestream.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream_view_history: "+err.Error())
-		}
-		viewersCount += cnt
+
+	var cnt int64
+	err = tx.GetContext(ctx, &cnt,
+		"SELECT COUNT(*) "+
+			" FROM livestream_viewers_history "+
+			" LEFT OUTER JOIN isupipe.livestreams l on l.id = livestream_viewers_history.livestream_id "+
+			" WHERE l.user_id = ?",
+		user.ID,
+	)
+
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream_view_history: "+err.Error())
 	}
 
 	// お気に入り絵文字
