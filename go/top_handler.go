@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"net/http"
@@ -22,34 +23,48 @@ type TagsResponse struct {
 	Tags []*Tag `json:"tags"`
 }
 
-func getTagHandler(c echo.Context) error {
-	ctx := c.Request().Context()
+func LoadTagCache() error {
 
-	tx, err := dbConn.BeginTxx(ctx, nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin new transaction: : "+err.Error()+err.Error())
-	}
-	defer tx.Rollback()
+	ctx := context.Background()
 
 	var tagModels []*TagModel
-	if err := tx.SelectContext(ctx, &tagModels, "SELECT * FROM tags"); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get tags: "+err.Error())
+	if err := dbConn.SelectContext(ctx, &tagModels, "SELECT * FROM tags"); err != nil {
+		return err
 	}
 
-	if err := tx.Commit(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
-	}
+	//if err := dbConn.Commit(); err != nil {
+	//	return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
+	//}
 
-	tags := make([]*Tag, len(tagModels))
-	for i := range tagModels {
-		tags[i] = &Tag{
-			ID:   tagModels[i].ID,
-			Name: tagModels[i].Name,
+	tags := make([]*Tag, 0)
+	for _, item := range tagModels {
+		at := &Tag{
+			ID:   item.ID,
+			Name: item.Name,
 		}
+		tags = append(tags, at)
 	}
+
+	tagCache = tags
+
+	return nil
+
+}
+
+func getTagHandler(c echo.Context) error {
+	//ctx := c.Request().Context()
+
+	if len(tagCache) == 0 {
+		LoadTagCache()
+	}
+
+	tags := tagCache
+
+	c.Response().Header().Set("Cache-Control", "max-age=36000000")
 	return c.JSON(http.StatusOK, &TagsResponse{
 		Tags: tags,
 	})
+
 }
 
 // 配信者のテーマ取得API
