@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"go.opentelemetry.io/otel/attribute"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -149,6 +150,7 @@ func initializeHandler(c echo.Context) error {
 }
 
 var tagCache []*Tag
+var fallBackGlobalImage []byte
 
 func main() {
 
@@ -246,6 +248,8 @@ func main() {
 
 	// cache 初期化
 	tagCache = make([]*Tag, 0)
+	// fallback iamge 読み込み
+	fallBackGlobalImage, _ = ioutil.ReadFile(fallbackImage)
 
 	// HTTPサーバ起動
 	listenAddr := net.JoinHostPort("", strconv.Itoa(listenPort))
