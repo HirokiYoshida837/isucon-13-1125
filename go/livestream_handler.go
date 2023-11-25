@@ -183,28 +183,24 @@ func searchLivestreamsHandler(c echo.Context) error {
 	var livestreamModels []*LivestreamModel
 	if c.QueryParam("tag") != "" {
 		// タグによる取得
-		var tagIDList []int
-		if err := tx.SelectContext(ctx, &tagIDList, "SELECT id FROM tags WHERE name = ?", keyTagName); err != nil {
+		var keyTaggedLivestreams []*LivestreamModel
+
+		query := `
+		SELECT l2.* FROM livestream_tags l
+		INNER JOIN tags as t ON l.tag_id = t.id
+        INNER JOIN livestreams as l2 ON l.livestream_id = l2.id
+		WHERE t.name = ?
+		ORDER BY l.livestream_id DESC
+		`
+		if err := tx.SelectContext(ctx, &keyTaggedLivestreams, query, keyTagName); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get tags: "+err.Error())
 		}
-
-		query, params, err := sqlx.In("SELECT * FROM livestream_tags WHERE tag_id IN (?) ORDER BY livestream_id DESC", tagIDList)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "failed to construct IN query: "+err.Error())
 		}
-		var keyTaggedLivestreams []*LivestreamTagModel
-		if err := tx.SelectContext(ctx, &keyTaggedLivestreams, query, params...); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get keyTaggedLivestreams: "+err.Error())
-		}
 
-		for _, keyTaggedLivestream := range keyTaggedLivestreams {
-			ls := LivestreamModel{}
-			if err := tx.GetContext(ctx, &ls, "SELECT * FROM livestreams WHERE id = ?", keyTaggedLivestream.LivestreamID); err != nil {
-				return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
-			}
-
-			livestreamModels = append(livestreamModels, &ls)
-		}
+		livestreamModels = keyTaggedLivestreams
+		// }
 	} else {
 		// 検索条件なし
 		query := `SELECT * FROM livestreams ORDER BY id DESC`
@@ -214,6 +210,8 @@ func searchLivestreamsHandler(c echo.Context) error {
 				return echo.NewHTTPError(http.StatusBadRequest, "limit query parameter must be integer")
 			}
 			query += fmt.Sprintf(" LIMIT %d", limit)
+		} else {
+			query += " LIMIT 10"
 		}
 
 		if err := tx.SelectContext(ctx, &livestreamModels, query); err != nil {
