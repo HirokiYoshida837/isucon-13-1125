@@ -128,7 +128,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 	INNER JOIN reactions r ON r.user_id = u.id
 	GROUP BY u.id
 	`
-	if err := tx.GetContext(ctx, &scores, query); err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err := tx.SelectContext(ctx, &scores, query); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to count reactions: "+err.Error())
 	}
 
