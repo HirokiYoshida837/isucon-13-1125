@@ -107,7 +107,10 @@ func getIconHandler(c echo.Context) error {
 	var image []byte
 	if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", user.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return c.File(fallbackImage)
+
+			//c.Response().Header().Set("Cache-Control", "max-age=36000000")
+			return c.Blob(http.StatusOK, "image/jpeg", fallBackGlobalImage)
+
 		} else {
 			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user icon: "+err.Error())
 		}
