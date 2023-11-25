@@ -199,12 +199,6 @@ func searchLivestreamsHandler(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusInternalServerError, "failed to construct IN query: "+err.Error())
 		}
 
-		// for _, keyTaggedLivestream := range keyTaggedLivestreams {
-		// 	ls := LivestreamModel{}
-		// 	if err := tx.GetContext(ctx, &ls, "SELECT * FROM livestreams WHERE id = ?", keyTaggedLivestream.LivestreamID); err != nil {
-		// 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
-		// 	}
-
 		livestreamModels = keyTaggedLivestreams
 		// }
 	} else {
