@@ -94,5 +94,7 @@ func getStreamerThemeHandler(c echo.Context) error {
 		DarkMode: themeModel.DarkMode,
 	}
 
+	c.Response().Header().Set("Cache-Control", "max-age=36000000")
+
 	return c.JSON(http.StatusOK, theme)
 }
