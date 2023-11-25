@@ -187,10 +187,6 @@ func postIconHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get last inserted icon id: "+err.Error())
 	}
 
-	if err := tx.Commit(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
-	}
-
 	// cache更新
 	reporterModel := UserModel{}
 	if err := tx.GetContext(ctx, &reporterModel, "SELECT * FROM users WHERE id = ?", userID); err != nil {
@@ -198,6 +194,10 @@ func postIconHandler(c echo.Context) error {
 	}
 
 	globalIconCache.addIcon(reporterModel.Name, req.Image)
+
+	if err := tx.Commit(); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
+	}
 
 	return c.JSON(http.StatusCreated, &PostIconResponse{
 		ID: iconID,
