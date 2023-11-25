@@ -121,10 +121,10 @@ func getUserStatisticsHandler(c echo.Context) error {
 
 		score := Score{}
 		query := `
-		SELECT COUNT(COALESCE(l2.tip, 0)) as tips, COUNT(DISTINCT r.livestream_id) as reactions FROM users u
+		SELECT COUNT(DISTINCT l2.id) as tips, COUNT(DISTINCT r.id) as reactions FROM users u
 		INNER JOIN livestreams l ON l.user_id = u.id
 		INNER JOIN livecomments l2 ON l2.livestream_id = l.id
-		INNER JOIN reactions r ON r.livestream_id = l.id
+		INNER JOIN reactions r ON r.user_id = u.id
 		WHERE u.id = ?
 		`
 		if err := tx.GetContext(ctx, &score, query, user.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
