@@ -234,7 +234,7 @@ func getLivestreamStatisticsHandler(c echo.Context) error {
 
 	// reactionのスコア一覧を取得
 	var reactionsScores []*StatisticsScoreModel
-	if err := tx.GetContext(ctx, &reactionsScores,`
+	if err := tx.SelectContext(ctx, &reactionsScores,`
 		SELECT
 			livestream_id,
 			COUNT(*) as score
@@ -247,7 +247,7 @@ func getLivestreamStatisticsHandler(c echo.Context) error {
 
 	// tipsのスコア一覧を取得
 	var tipsScores []*StatisticsScoreModel
-	if err := tx.GetContext(ctx, &tipsScores,`
+	if err := tx.SelectContext(ctx, &tipsScores,`
 		SELECT
 			livestream_id,
 			IFNULL(SUM(l2.tip), 0) as score
