@@ -21,3 +21,6 @@ create index themes_user_id_index
 create index livestream_tags_livestream_id_index2
     on livestream_tags (livestream_id);
 
+create index reactions_created_at_livestream_id_index
+    on reactions (created_at, livestream_id);
+
