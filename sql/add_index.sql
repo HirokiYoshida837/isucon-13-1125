@@ -13,3 +13,7 @@ create index reservation_slots_start_at_index
 
 create index reservation_slots_end_at_index
     on reservation_slots (end_at);
+
+create index themes_user_id_index
+    on themes (user_id);
+
